@@ -6,10 +6,12 @@ import {
   Param,
   Patch,
   Post,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 
 import { UserService } from './user.service';
-import { Users } from './entities/user.entity';
+import { Users } from '../entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 
 @Controller('users')
@@ -17,26 +19,32 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  findAll() {
-    return this.userService.findAll();
+  async findAll() {
+    return await this.userService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(Number(id));
+  async findOne(@Param('id') id: string) {
+    return await this.userService.findOne(Number(id));
   }
 
   @Post()
-  create(@Body() body: CreateUserDto) {
-    return this.userService.create(body);
+  @HttpCode(HttpStatus.CREATED)
+  async create(@Body() createUserDto: CreateUserDto) {
+    return await this.userService.create(createUserDto);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: Partial<Users>) {
-    return this.userService.update(Number(id), body);
+  async update(
+    @Param('id') id: string,
+    @Body() updateData: Partial<CreateUserDto>,
+  ) {
+    return await this.userService.update(Number(id), updateData);
   }
-  @Delete()
-  delete(@Param('id') id: string) {
-    return this.userService.delete(Number(id));
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(@Param('id') id: string) {
+    return await this.userService.delete(Number(id));
   }
 }

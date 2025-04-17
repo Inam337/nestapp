@@ -1,16 +1,36 @@
-import { Customer } from 'src/customers/entities/customer.entity';
 import { DataSource, DataSourceOptions } from 'typeorm';
-import { Users } from 'src/users/entities/user.entity';
+import { Users } from '../entities/user.entity';
+import { Category } from '../entities/category.entity';
+import { Product } from '../entities/product.entity';
+import { Stock } from '../entities/stock.entity';
+import { Purchase } from 'src/entities/purchase.entity';
+import { PurchaseItem } from 'src/entities/purchase.item.entity';
+import { Sale } from 'src/entities/sale.entity';
+import { SaleItem } from 'src/entities/sale.item.entity';
+import { Supplier } from 'src/entities/supplier.entity';
+import { Customer } from 'src/entities/customer.entity';
+
 export const databaseConfig: DataSourceOptions = {
   type: 'postgres',
-  host: process.env.DB_HOST ?? 'localhost',
-  port: Number(process.env.DB_PORT ?? 5432),
-  username: process.env.DB_USERNAME ?? 'postgres',
-  password: process.env.DB_PASSWORD ?? 'root',
-  database: process.env.DB_NAME ?? 'inventory',
-  entities: [Customer, Users],
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  username: process.env.DB_USERNAME || 'postgres',
+  password: process.env.DB_PASSWORD || 'root',
+  database: process.env.DB_NAME || 'inventory',
+  entities: [
+    Customer,
+    Users,
+    Category,
+    Product,
+    Stock,
+    Purchase,
+    PurchaseItem,
+    Sale,
+    SaleItem,
+    Supplier,
+  ],
   synchronize: true,
-  logging: process.env.NODE_ENV !== 'production',
+  logging: true,
 };
 
 export class DatabaseService {
