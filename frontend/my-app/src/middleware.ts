@@ -2,12 +2,20 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isValidRoute } from "./app/routes";
 
+// Auth routes that should always be accessible
+const AUTH_ROUTES = ["/auth/login", "/auth/register"];
+
 export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Redirect root to dashboard
   if (path === "/") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  // Always allow auth routes
+  if (AUTH_ROUTES.includes(path)) {
+    return NextResponse.next();
   }
 
   // Check if the route is valid

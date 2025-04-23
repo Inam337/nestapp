@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getAllRoutes } from "@/app/routes";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import { getNavigationRoutes } from "@/app/routes";
 
 export const Navigation = () => {
   const pathname = usePathname();
-  const routes = getAllRoutes();
+  const { token } = useSelector((state: RootState) => state.auth);
+  const routes = getNavigationRoutes(!!token);
 
   return (
     <nav className="hidden md:flex space-x-4">

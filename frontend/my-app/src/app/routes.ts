@@ -9,9 +9,11 @@ export interface Route {
   path: string;
   label: string;
   icon: RouteIcon;
+  isAuthRoute?: boolean;
 }
 
-export const routes = {
+// Define the routes without 'as const' to allow the optional isAuthRoute property
+export const routes: Record<string, Route> = {
   dashboard: {
     path: "/dashboard",
     label: "Dashboard",
@@ -75,6 +77,7 @@ export const routes = {
       name: CommonIconNames.ARROW_RIGHT_ICON,
       fill: "#9CA3AF",
     },
+    isAuthRoute: true,
   },
   register: {
     path: "/auth/register",
@@ -83,12 +86,20 @@ export const routes = {
       name: CommonIconNames.MENU_ICON,
       fill: "#9CA3AF",
     },
+    isAuthRoute: true,
   },
-} as const;
+};
 
 // Helper function to get all routes
 export const getAllRoutes = (): Route[] => {
   return Object.values(routes);
+};
+
+// Helper function to get routes for navigation (can exclude auth routes when logged in)
+export const getNavigationRoutes = (isAuthenticated: boolean): Route[] => {
+  return Object.values(routes).filter((route) => {
+    return isAuthenticated ? !route.isAuthRoute : true;
+  });
 };
 
 // Helper function to get route by path

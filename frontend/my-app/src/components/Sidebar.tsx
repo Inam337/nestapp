@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getAllRoutes } from "@/app/routes";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import { getNavigationRoutes } from "@/app/routes";
 import { CommonIcon } from "@/common/icons/CommonIcon";
 import { Sidebar as ProSidebar, Menu, MenuItem } from "react-pro-sidebar";
 import { CommonIconNames, IconColors } from "@/common/icons/types";
@@ -16,6 +18,10 @@ const Sidebar = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const { token } = useSelector((state: RootState) => state.auth);
+
+  // Get routes for navigation based on authentication status
+  const navigationRoutes = getNavigationRoutes(!!token);
 
   useEffect(() => {
     setMounted(true);
@@ -141,7 +147,7 @@ const Sidebar = () => {
               },
             }}
           >
-            {getAllRoutes().map((route) => {
+            {navigationRoutes.map((route) => {
               const isActive = isActiveRoute(route.path);
               return (
                 <MenuItem
