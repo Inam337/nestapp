@@ -1,9 +1,5 @@
 import axios, { AxiosError } from "axios";
-import {
-  User,
-  UserListResponse,
-  UpdateUserStatusRequest,
-} from "@/types/user.types";
+import { User } from "@/types/user.types";
 
 export class UserService {
   private baseUrl = "http://localhost:3000";
@@ -45,57 +41,6 @@ export class UserService {
       };
     } catch (error) {
       this.handleApiError(error, `Failed to fetch user with ID ${id}`);
-    }
-  }
-
-  async updateUserStatus(id: number, isActive: boolean): Promise<User> {
-    try {
-      console.log(`Attempting to update user ${id} status to ${isActive}`);
-
-      try {
-        // Use the dedicated status endpoint
-        const response = await axios.patch(
-          `${this.baseUrl}/users/${id}/status`,
-          { isActive }
-        );
-        console.log(`User ${id} status updated successfully`);
-        return response.data;
-      } catch (error) {
-        // If API call fails, try local fallback
-        console.warn(`API call failed, using local fallback`);
-
-        // Check if we have the user in our local cache
-        if (this.users.length > 0) {
-          const userIndex = this.users.findIndex((user) => user.id === id);
-
-          if (userIndex !== -1) {
-            // Update the local cache
-            const updatedUser = {
-              ...this.users[userIndex],
-              isActive,
-              updatedAt: new Date().toISOString(),
-            };
-
-            this.users[userIndex] = updatedUser;
-            console.log(
-              `User ${id} status updated in local cache only`,
-              updatedUser
-            );
-
-            // Return the updated user object
-            return updatedUser;
-          }
-        }
-
-        // If we can't find the user locally either, rethrow the original error
-        throw error;
-      }
-    } catch (error) {
-      console.error(`Error updating user status:`, error);
-      this.handleApiError(
-        error,
-        `Failed to update status for user with ID ${id}`
-      );
     }
   }
 

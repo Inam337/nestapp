@@ -20,6 +20,9 @@ export class Users {
   @Column()
   password: string;
 
+  @Column({ type: 'varchar', default: 'user' })
+  role: string; // 'user' by default, can be 'admin', etc.
+
   @Column({ type: 'boolean', default: true })
   status: boolean; // true = active, false = inactive
 
