@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Users } from '../entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 
 @Injectable()
 export class UserService {
@@ -70,5 +71,23 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
     return { message: 'User deleted successfully' };
+  }
+
+  async updateStatus(id: number, statusData: UpdateUserStatusDto) {
+    const user = await this.userRepo.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Update the status property based on isActive value
+    user.status = statusData.isActive;
+    const updated = await this.userRepo.save(user);
+
+    // Map to our API response format
+    const { password, ...result } = updated;
+    return {
+      ...result,
+      isActive: result.status, // Map status to isActive for frontend compatibility
+    };
   }
 }

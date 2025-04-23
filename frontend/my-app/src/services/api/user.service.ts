@@ -17,6 +17,13 @@ export class UserService {
       // Store users in our local cache for fallback functionality
       this.users = Array.isArray(response.data) ? response.data : [];
 
+      // Transform the response data to ensure isActive is available
+      // (backend returns status, frontend uses isActive)
+      this.users = this.users.map((user) => ({
+        ...user,
+        isActive: user.isActive !== undefined ? user.isActive : user.status,
+      }));
+
       return {
         users: this.users,
         total: this.users.length,
@@ -29,7 +36,13 @@ export class UserService {
   async getUserById(id: number): Promise<User> {
     try {
       const response = await axios.get(`${this.baseUrl}/users/${id}`);
-      return response.data;
+      const user = response.data;
+
+      // Ensure isActive is available (backend returns status, frontend uses isActive)
+      return {
+        ...user,
+        isActive: user.isActive !== undefined ? user.isActive : user.status,
+      };
     } catch (error) {
       this.handleApiError(error, `Failed to fetch user with ID ${id}`);
     }
@@ -39,62 +52,43 @@ export class UserService {
     try {
       console.log(`Attempting to update user ${id} status to ${isActive}`);
 
-      // First try with the /status endpoint
       try {
+        // Use the dedicated status endpoint
         const response = await axios.patch(
           `${this.baseUrl}/users/${id}/status`,
-          {
-            isActive,
-          }
+          { isActive }
         );
-        console.log(
-          `User ${id} status updated successfully using /status endpoint`
-        );
+        console.log(`User ${id} status updated successfully`);
         return response.data;
-      } catch (statusError) {
-        // If the /status endpoint fails, try the direct approach
-        console.warn(
-          `/status endpoint failed, trying direct update to /users/${id}`
-        );
+      } catch (error) {
+        // If API call fails, try local fallback
+        console.warn(`API call failed, using local fallback`);
 
-        try {
-          const response = await axios.patch(`${this.baseUrl}/users/${id}`, {
-            isActive,
-          });
-          console.log(
-            `User ${id} status updated successfully using direct approach`
-          );
-          return response.data;
-        } catch (directError) {
-          // Both approaches failed, try the fallback
-          console.warn(`Both API approaches failed, using local fallback`);
+        // Check if we have the user in our local cache
+        if (this.users.length > 0) {
+          const userIndex = this.users.findIndex((user) => user.id === id);
 
-          // Check if we have the user in our local cache
-          if (this.users.length > 0) {
-            const userIndex = this.users.findIndex((user) => user.id === id);
+          if (userIndex !== -1) {
+            // Update the local cache
+            const updatedUser = {
+              ...this.users[userIndex],
+              isActive,
+              updatedAt: new Date().toISOString(),
+            };
 
-            if (userIndex !== -1) {
-              // Update the local cache
-              const updatedUser = {
-                ...this.users[userIndex],
-                isActive,
-                updatedAt: new Date().toISOString(),
-              };
+            this.users[userIndex] = updatedUser;
+            console.log(
+              `User ${id} status updated in local cache only`,
+              updatedUser
+            );
 
-              this.users[userIndex] = updatedUser;
-              console.log(
-                `User ${id} status updated in local cache only`,
-                updatedUser
-              );
-
-              // Return the updated user object
-              return updatedUser;
-            }
+            // Return the updated user object
+            return updatedUser;
           }
-
-          // If we can't find the user or direct approach failed, throw the original error
-          throw directError;
         }
+
+        // If we can't find the user locally either, rethrow the original error
+        throw error;
       }
     } catch (error) {
       console.error(`Error updating user status:`, error);

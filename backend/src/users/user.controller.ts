@@ -13,6 +13,7 @@ import {
 import { UserService } from './user.service';
 import { Users } from '../entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 
 @Controller('users')
 export class UserController {
@@ -46,5 +47,13 @@ export class UserController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(@Param('id') id: string) {
     return await this.userService.delete(Number(id));
+  }
+
+  @Patch(':id/status')
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() updateStatusDto: UpdateUserStatusDto,
+  ) {
+    return await this.userService.updateStatus(Number(id), updateStatusDto);
   }
 }
