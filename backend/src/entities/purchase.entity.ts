@@ -13,13 +13,16 @@ export class Purchase {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Supplier, (supplier) => supplier.purchases)
+  @ManyToOne(() => Supplier, (supplier) => supplier.purchases, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   supplier: Supplier;
 
-  @OneToMany(() => PurchaseItem, (item) => item.purchase)
+  @OneToMany(() => PurchaseItem, (item) => item.purchase, { cascade: true })
   items: PurchaseItem[];
 
-  @Column()
+  @Column('decimal', { precision: 10, scale: 2 })
   totalAmount: number;
 
   @CreateDateColumn()

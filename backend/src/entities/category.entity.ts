@@ -9,6 +9,9 @@ export class Category {
   @Column({ unique: true })
   name: string;
 
+  @Column({ nullable: true, default: '' })
+  description: string;
+
   @OneToMany(() => Product, (product) => product.category, {
     cascade: true,
     eager: false,

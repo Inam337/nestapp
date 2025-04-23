@@ -13,7 +13,7 @@ export class Stock {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Product, (product) => product.stock, {
+  @ManyToOne(() => Product, (product) => product.stockEntries, {
     onDelete: 'CASCADE',
   })
   @JoinColumn()
@@ -22,7 +22,7 @@ export class Stock {
   @Column('int')
   quantity: number;
 
-  @Column()
+  @Column({ type: 'varchar', length: 100 })
   location: string;
 
   @CreateDateColumn()

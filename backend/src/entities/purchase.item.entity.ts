@@ -8,15 +8,17 @@ export class PurchaseItem {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Purchase, (purchase) => purchase.items)
+  @ManyToOne(() => Purchase, (purchase) => purchase.items, {
+    onDelete: 'CASCADE',
+  })
   purchase: Purchase;
 
   @ManyToOne(() => Product)
   product: Product;
 
-  @Column()
+  @Column('int')
   quantity: number;
 
-  @Column()
+  @Column('decimal', { precision: 10, scale: 2 })
   unitPrice: number;
 }

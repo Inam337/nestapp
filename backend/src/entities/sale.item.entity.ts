@@ -6,15 +6,17 @@ export class SaleItem {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Sale, (sale) => sale.items)
+  @ManyToOne(() => Sale, (sale) => sale.items, {
+    onDelete: 'CASCADE',
+  })
   sale: Sale;
 
   @ManyToOne(() => Product)
   product: Product;
 
-  @Column()
+  @Column('int')
   quantity: number;
 
-  @Column()
+  @Column('decimal', { precision: 10, scale: 2 })
   unitPrice: number;
 }
