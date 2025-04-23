@@ -17,7 +17,6 @@ export class UserService {
       // (backend returns status, frontend uses isActive)
       this.users = this.users.map((user) => ({
         ...user,
-        isActive: user.isActive !== undefined ? user.isActive : user.status,
       }));
 
       return {
@@ -37,7 +36,6 @@ export class UserService {
       // Ensure isActive is available (backend returns status, frontend uses isActive)
       return {
         ...user,
-        isActive: user.isActive !== undefined ? user.isActive : user.status,
       };
     } catch (error) {
       this.handleApiError(error, `Failed to fetch user with ID ${id}`);
