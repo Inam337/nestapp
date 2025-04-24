@@ -1,5 +1,5 @@
 import axios, { AxiosError } from "axios";
-import { User } from "@/types/user.types";
+import { User, UpdateUserStatusRequest } from "@/types/user.types";
 import axiosInstance from "./axios.config";
 
 export class UserService {
@@ -13,10 +13,11 @@ export class UserService {
       // Store users in our local cache for fallback functionality
       this.users = Array.isArray(response.data) ? response.data : [];
 
-      // Transform the response data to ensure isActive is available
-      // (backend returns status, frontend uses isActive)
+      // Make sure we always have the status field properly set
       this.users = this.users.map((user) => ({
         ...user,
+        // Ensure status is a boolean
+        status: typeof user.status === "boolean" ? user.status : !!user.status,
       }));
 
       return {
@@ -39,6 +40,32 @@ export class UserService {
       };
     } catch (error) {
       this.handleApiError(error, `Failed to fetch user with ID ${id}`);
+    }
+  }
+
+  async updateUserStatus(
+    userId: number,
+    data: UpdateUserStatusRequest
+  ): Promise<User> {
+    try {
+      const response = await axiosInstance.patch(
+        `/users/${userId}/status`,
+        data
+      );
+      console.log(`User ${userId} status updated:`, response.data);
+
+      // Ensure the returned user has the status field set correctly
+      const updatedUser = {
+        ...response.data,
+        status: data.isActive, // Use the value we sent since that's what was updated
+      };
+
+      return updatedUser;
+    } catch (error) {
+      this.handleApiError(
+        error,
+        `Failed to update status for user with ID ${userId}`
+      );
     }
   }
 

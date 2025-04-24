@@ -4,16 +4,22 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { TableColumn } from "react-data-table-component";
 import { AppDispatch, RootState } from "@/store/store";
-import { fetchUsers } from "@/store/users/users.slice";
+import { fetchUsers, updateUserStatus } from "@/store/users/users.slice";
 import { User } from "@/types/user.types";
 import DynamicDataTable from "@/components/common/table";
 import MainLayout from "@/components/MainLayout";
+import Switch from "@/components/common/Switch";
 
 export default function UsersPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { users, loading, error, total } = useSelector(
     (state: RootState) => state.users
   );
+
+  const handleToggleUserStatus = (userId: number, currentStatus: boolean) => {
+    // Toggle the current status
+    dispatch(updateUserStatus({ userId, isActive: !currentStatus }));
+  };
 
   // Define table columns
   const userColumns: TableColumn<User>[] = [
@@ -43,6 +49,20 @@ export default function UsersPage() {
       name: "Status",
       width: "150px",
       sortable: true,
+      cell: (row) => (
+        <div className="flex items-center">
+          <Switch
+            isOn={!!row.status}
+            handleToggle={() => handleToggleUserStatus(row.id, !!row.status)}
+            disabled={loading}
+          />
+          <span
+            className={`ml-2 ${row.status ? "text-green-600" : "text-red-600"}`}
+          >
+            {loading ? "Updating..." : row.status ? "Active" : "Inactive"}
+          </span>
+        </div>
+      ),
     },
     {
       name: "Created At",

@@ -23,7 +23,7 @@ export class Users {
   @Column({ type: 'varchar', default: 'user' })
   role: string; // 'user' by default, can be 'admin', etc.
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: 'boolean', default: false })
   status: boolean; // true = active, false = inactive
 
   @CreateDateColumn()
