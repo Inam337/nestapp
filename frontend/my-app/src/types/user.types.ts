@@ -3,7 +3,7 @@ export interface User {
   name: string;
   email: string;
   role: string;
-  status?: boolean;
+  status: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

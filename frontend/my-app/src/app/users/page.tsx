@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { TableColumn } from "react-data-table-component";
 import { AppDispatch, RootState } from "@/store/store";
@@ -15,10 +15,66 @@ export default function UsersPage() {
   const { users, loading, error, total } = useSelector(
     (state: RootState) => state.users
   );
+  const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
+
+  // Cache the user status to prevent UI flicker during rerenders
+  const [userStatusCache, setUserStatusCache] = useState<{
+    [key: number]: boolean;
+  }>({});
+
+  // Update the cache whenever users change
+  useEffect(() => {
+    if (users?.length) {
+      const newCache = { ...userStatusCache };
+
+      // Update cache with latest status from the API
+      users.forEach((user) => {
+        // Only update if the user is not currently being updated
+        if (user.id !== updatingUserId) {
+          newCache[user.id] = !!user.status;
+        }
+      });
+
+      setUserStatusCache(newCache);
+    }
+  }, [users]);
+
+  // Force refresh data from the server
+  const refreshData = useCallback(() => {
+    dispatch(fetchUsers()).then((action) => {
+      console.log("Users data refreshed:", action.payload);
+    });
+  }, [dispatch]);
 
   const handleToggleUserStatus = (userId: number, currentStatus: boolean) => {
-    // Toggle the current status
-    dispatch(updateUserStatus({ userId, isActive: !currentStatus }));
+    // Track which user is being updated
+    setUpdatingUserId(userId);
+
+    // Update the cache optimistically
+    const newStatus = !currentStatus;
+    setUserStatusCache((prev) => ({
+      ...prev,
+      [userId]: newStatus,
+    }));
+
+    // Make the API call to update the status
+    dispatch(updateUserStatus({ userId, isActive: newStatus }))
+      .then(() => {
+        // Status update was successful
+        console.log(`User ${userId} status updated to ${newStatus}`);
+        setUpdatingUserId(null);
+      })
+      .catch((error) => {
+        console.error(`Failed to update user ${userId} status:`, error);
+
+        // Revert the cache on error
+        setUserStatusCache((prev) => ({
+          ...prev,
+          [userId]: currentStatus, // Revert to original status
+        }));
+
+        setUpdatingUserId(null);
+      });
   };
 
   // Define table columns
@@ -49,20 +105,34 @@ export default function UsersPage() {
       name: "Status",
       width: "150px",
       sortable: true,
-      cell: (row) => (
-        <div className="flex items-center">
-          <Switch
-            isOn={!!row.status}
-            handleToggle={() => handleToggleUserStatus(row.id, !!row.status)}
-            disabled={loading}
-          />
-          <span
-            className={`ml-2 ${row.status ? "text-green-600" : "text-red-600"}`}
-          >
-            {loading ? "Updating..." : row.status ? "Active" : "Inactive"}
-          </span>
-        </div>
-      ),
+      cell: (row) => {
+        const isUpdatingThisUser = updatingUserId === row.id;
+
+        // Get the status from cache if available, otherwise use the status from the API
+        const currentStatus =
+          row.id in userStatusCache ? userStatusCache[row.id] : !!row.status;
+
+        return (
+          <div className="flex items-center">
+            <Switch
+              isOn={currentStatus}
+              handleToggle={() => handleToggleUserStatus(row.id, currentStatus)}
+              disabled={loading || isUpdatingThisUser}
+            />
+            <span
+              className={`ml-2 ${
+                currentStatus ? "text-green-600 font-medium" : "text-red-600"
+              }`}
+            >
+              {isUpdatingThisUser
+                ? "Updating..."
+                : currentStatus
+                ? "Active"
+                : "Inactive"}
+            </span>
+          </div>
+        );
+      },
     },
     {
       name: "Created At",
@@ -73,8 +143,14 @@ export default function UsersPage() {
   ];
 
   useEffect(() => {
-    dispatch(fetchUsers());
-  }, [dispatch]);
+    // Initial data load
+    refreshData();
+
+    // // Clean up when component unmounts
+    // return () => {
+    //   setUpdatingUserId(null);
+    // };
+  }, [refreshData]);
 
   return (
     <MainLayout>
@@ -86,21 +162,21 @@ export default function UsersPage() {
             </h1>
             <p className="text-gray-600">
               View and manage system users
-              {loading && (
+              {loading && !updatingUserId && (
                 <span className="ml-2 text-blue-600">Loading...</span>
               )}
             </p>
           </div>
           <button
-            onClick={() => dispatch(fetchUsers())}
-            disabled={loading}
+            onClick={refreshData}
+            disabled={loading && !updatingUserId}
             className={`px-4 py-2 rounded ${
-              loading
+              loading && !updatingUserId
                 ? "bg-gray-300 cursor-not-allowed"
                 : "bg-blue-500 hover:bg-blue-600 text-white"
             }`}
           >
-            {loading ? "Refreshing..." : "Refresh"}
+            {loading && !updatingUserId ? "Refreshing..." : "Refresh"}
           </button>
         </div>
 
@@ -120,7 +196,7 @@ export default function UsersPage() {
             title={`User List (${total || 0} users)`}
             columns={userColumns}
             data={users || []}
-            isLoading={loading}
+            isLoading={loading && !updatingUserId}
             pagination
             paginationPerPage={10}
             paginationRowsPerPageOptions={[10, 20, 30, 50]}

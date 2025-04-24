@@ -13,6 +13,9 @@ const initialState: UsersState = {
   total: 0,
 };
 
+// Keep track of user status changes that have been requested but may not be reflected in the API response yet
+let pendingStatusChanges: { [userId: number]: boolean } = {};
+
 // Async thunks
 export const fetchUsers = createAsyncThunk("users/fetchUsers", async () => {
   const response = await userService.getUsers();
@@ -22,17 +25,41 @@ export const fetchUsers = createAsyncThunk("users/fetchUsers", async () => {
 export const updateUserStatus = createAsyncThunk(
   "users/updateUserStatus",
   async ({ userId, isActive }: { userId: number; isActive: boolean }) => {
-    const data: UpdateUserStatusRequest = { isActive };
+    try {
+      const data: UpdateUserStatusRequest = { isActive };
 
-    // First update the user's status
-    const updatedUser = await userService.updateUserStatus(userId, data);
-    console.log("Status updated for user:", updatedUser);
+      // Record this pending status change
+      pendingStatusChanges[userId] = isActive;
 
-    // Then fetch all users to get the latest data
-    const response = await userService.getUsers();
-    console.log("Fetched updated users after status change:", response);
+      // First update the user's status
+      const updatedUser = await userService.updateUserStatus(userId, data);
+      console.log("Status updated for user:", updatedUser);
 
-    return response;
+      // Then fetch all users to get the latest data
+      const response = await userService.getUsers();
+      console.log("Fetched updated users after status change:", response);
+
+      // Apply all pending status changes, including this one
+      const updatedUsers = response.users.map((user) => {
+        if (user.id in pendingStatusChanges) {
+          return {
+            ...user,
+            status: pendingStatusChanges[user.id], // Apply the pending status change
+          };
+        }
+        return user;
+      });
+
+      return {
+        ...response,
+        users: updatedUsers,
+      };
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      // Remove the pending status change for this user
+      delete pendingStatusChanges[userId];
+      throw error;
+    }
   }
 );
 
@@ -56,7 +83,19 @@ const usersSlice = createSlice({
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
         state.loading = false;
-        state.users = action.payload.users;
+
+        // Apply any pending status changes to the newly fetched data
+        const users = action.payload.users.map((user) => {
+          if (user.id in pendingStatusChanges) {
+            return {
+              ...user,
+              status: pendingStatusChanges[user.id],
+            };
+          }
+          return user;
+        });
+
+        state.users = users;
         state.total = action.payload.total;
       })
       .addCase(fetchUsers.rejected, (state, action) => {

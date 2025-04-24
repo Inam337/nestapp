@@ -7,18 +7,20 @@ export class UserService {
 
   async getUsers(): Promise<{ users: User[]; total: number }> {
     try {
-      const response = await axiosInstance.get(`/users`);
+      const response = await axiosInstance.get(`users`);
       console.log("Users data from API:", response.data);
 
       // Store users in our local cache for fallback functionality
       this.users = Array.isArray(response.data) ? response.data : [];
 
-      // Make sure we always have the status field properly set
+      // Make sure we always have the status field properly set as a boolean
       this.users = this.users.map((user) => ({
         ...user,
-        // Ensure status is a boolean
-        status: typeof user.status === "boolean" ? user.status : !!user.status,
+        // Simple boolean conversion - defaults to false if status is falsy
+        status: Boolean(user.status),
       }));
+
+      console.log("Processed users with normalized status:", this.users);
 
       return {
         users: this.users,
@@ -34,9 +36,10 @@ export class UserService {
       const response = await axiosInstance.get(`/users/${id}`);
       const user = response.data;
 
-      // Ensure isActive is available (backend returns status, frontend uses isActive)
+      // Ensure status is a boolean
       return {
         ...user,
+        status: Boolean(user.status),
       };
     } catch (error) {
       this.handleApiError(error, `Failed to fetch user with ID ${id}`);
@@ -57,11 +60,25 @@ export class UserService {
       // Ensure the returned user has the status field set correctly
       const updatedUser = {
         ...response.data,
-        status: data.isActive, // Use the value we sent since that's what was updated
+        // Force status to be a boolean
+        status: Boolean(data.isActive),
       };
+
+      // Update our local cache to maintain consistency
+      try {
+        // Create a new array to avoid potential immutability issues
+        this.users = this.users.map((user) =>
+          user.id === userId
+            ? { ...user, status: Boolean(data.isActive) }
+            : user
+        );
+      } catch (e) {
+        console.warn("Failed to update local cache:", e);
+      }
 
       return updatedUser;
     } catch (error) {
+      console.error("Error updating user status:", error);
       this.handleApiError(
         error,
         `Failed to update status for user with ID ${userId}`
