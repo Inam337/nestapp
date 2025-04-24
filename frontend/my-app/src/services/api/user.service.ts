@@ -1,13 +1,13 @@
 import axios, { AxiosError } from "axios";
 import { User } from "@/types/user.types";
+import axiosInstance from "./axios.config";
 
 export class UserService {
-  private baseUrl = "http://localhost:3000";
   private users: User[] = []; // Local cache of users for fallback functionality
 
   async getUsers(): Promise<{ users: User[]; total: number }> {
     try {
-      const response = await axios.get(`${this.baseUrl}/users`);
+      const response = await axiosInstance.get(`/users`);
       console.log("Users data from API:", response.data);
 
       // Store users in our local cache for fallback functionality
@@ -30,7 +30,7 @@ export class UserService {
 
   async getUserById(id: number): Promise<User> {
     try {
-      const response = await axios.get(`${this.baseUrl}/users/${id}`);
+      const response = await axiosInstance.get(`/users/${id}`);
       const user = response.data;
 
       // Ensure isActive is available (backend returns status, frontend uses isActive)
@@ -65,7 +65,7 @@ export class UserService {
       } else if (axiosError.request) {
         // Request was made but no response was received
         throw new Error(
-          `Network Error: Unable to connect to API server at ${this.baseUrl}. Please check if the server is running.`
+          `Network Error: Unable to connect to API server. Please check if the server is running.`
         );
       } else {
         // Error in setting up the request
