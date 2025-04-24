@@ -13,12 +13,12 @@ export class UserService {
       // Store users in our local cache for fallback functionality
       this.users = Array.isArray(response.data) ? response.data : [];
 
-      // Make sure we always have the status field properly set as a boolean
-      this.users = this.users.map((user) => ({
-        ...user,
-        // Simple boolean conversion - defaults to false if status is falsy
-        status: Boolean(user.status),
-      }));
+      // // Make sure we always have the status field properly set as a boolean
+      // this.users = this.users.map((user) => ({
+      //   ...user,
+      //   // Simple boolean conversion - defaults to false if status is falsy
+      //   status: Boolean(user.status),
+      // }));
 
       console.log("Processed users with normalized status:", this.users);
 
@@ -33,7 +33,7 @@ export class UserService {
 
   async getUserById(id: number): Promise<User> {
     try {
-      const response = await axiosInstance.get(`/users/${id}`);
+      const response = await axiosInstance.get(`users/${id}`);
       const user = response.data;
 
       // Ensure status is a boolean
@@ -52,7 +52,7 @@ export class UserService {
   ): Promise<User> {
     try {
       const response = await axiosInstance.patch(
-        `/users/${userId}/status`,
+        `users/${userId}/status`,
         data
       );
       console.log(`User ${userId} status updated:`, response.data);

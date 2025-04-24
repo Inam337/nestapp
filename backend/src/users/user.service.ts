@@ -15,14 +15,30 @@ export class UserService {
 
   async findAll() {
     return await this.userRepo.find({
-      select: ['id', 'name', 'email', 'createdAt', 'updatedAt'],
+      select: [
+        'id',
+        'name',
+        'email',
+        'role',
+        'status',
+        'createdAt',
+        'updatedAt',
+      ],
     });
   }
 
   async findOne(id: number) {
     const user = await this.userRepo.findOne({
       where: { id },
-      select: ['id', 'name', 'email', 'createdAt', 'updatedAt'],
+      select: [
+        'id',
+        'name',
+        'email',
+        'role',
+        'status',
+        'createdAt',
+        'updatedAt',
+      ],
     });
 
     if (!user) {
