@@ -93,6 +93,12 @@ export class AuthService {
         throw new UnauthorizedException('Invalid email or password');
       }
 
+      // Check if user is inactive
+      if (user.status === false) {
+        console.log('Login attempt by inactive user:', email);
+        throw new UnauthorizedException('User is inactive');
+      }
+
       const token = this.jwtService.sign({
         userId: user.id,
         email: user.email,
