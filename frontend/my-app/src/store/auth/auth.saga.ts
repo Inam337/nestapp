@@ -49,7 +49,14 @@ function* loginSaga(
     localStorage.setItem("refreshToken", response.refreshToken);
     localStorage.setItem("user", JSON.stringify(response.user));
 
-    yield put(loginSuccess(response));
+    // Add status property to user object to match User type
+    yield put(
+      loginSuccess({
+        user: { ...response.user, status: true },
+        token: response.token,
+        refreshToken: response.refreshToken,
+      })
+    );
     console.log("Redux store updated with login success");
 
     // Using window.location.href for a full page reload which can help with state reset issues
@@ -81,7 +88,14 @@ function* registerSaga(
     // User should log in explicitly
     console.log("Registration successful");
 
-    yield put(registerSuccess(response));
+    // Add status property to user object to match User type
+    yield put(
+      registerSuccess({
+        user: { ...response.user, status: true },
+        token: response.token,
+        refreshToken: response.refreshToken,
+      })
+    );
     toast.success("Registration successful! Please login.");
 
     // Redirect to login page after successful registration
