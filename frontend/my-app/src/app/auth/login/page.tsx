@@ -11,9 +11,6 @@ import Image from "next/image";
 import LoginBackground from "../../../assets/bg/bg.jpg";
 import Link from "next/link";
 import Logo from "../../../assets/logo/logo.svg";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { FirebaseError } from "firebase/app";
 import { LoginCredentials } from "@/types/user.types";
 
 const loginSchema = Yup.object().shape({
@@ -36,7 +33,7 @@ export default function Login() {
   const { loading, error, token } = useSelector(
     (state: RootState) => state.auth
   );
-  const [firebaseError, setFirebaseError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -46,10 +43,14 @@ export default function Login() {
       router.push("/dashboard");
     }
 
-    // Display Redux error when it exists (specifically for inactive user errors)
+    // Display Redux error when it exists
     if (error) {
-      // Set firebaseError state to display the error from Redux
-      setFirebaseError(error);
+      setAuthError(error);
+
+      // Log the error for debugging purposes
+      if (error.includes("inactive")) {
+        console.log("Account inactive error detected");
+      }
     }
   }, [token, router, error]);
 
@@ -60,56 +61,61 @@ export default function Login() {
 
   const handleSubmit = async (values: LoginFormValues) => {
     try {
-      setFirebaseError(null);
-      console.log("Attempting to sign in with Firebase...");
+      setAuthError(null);
+      console.log("Attempting to sign in...");
 
-      // First authenticate with Firebase
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        values.email,
-        values.password
-      );
-
-      console.log("Firebase authentication successful");
-
-      // Get the Firebase token
-      const firebaseToken = await userCredential.user.getIdToken();
-      console.log("Firebase token obtained");
-
-      // Now dispatch the login action with the token
+      // Dispatch login action directly with credentials
       const loginData: LoginCredentials = {
         email: values.email,
         password: values.password,
-        firebaseToken,
       };
+
       console.log("Dispatching login action to Redux");
       dispatch(login(loginData));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      if (error instanceof FirebaseError) {
-        // Handle Firebase errors
-        console.log(`Firebase error code: ${error.code}`);
-        switch (error.code) {
-          case "auth/user-not-found":
-          case "auth/wrong-password":
-            setFirebaseError("Invalid email or password");
-            break;
-          case "auth/too-many-requests":
-            setFirebaseError(
-              "Too many failed login attempts. Please try again later."
-            );
-            break;
-          case "auth/network-request-failed":
-            setFirebaseError("Network error. Please check your connection.");
-            break;
-          default:
-            setFirebaseError(`${error.code}: ${error.message}`);
-        }
+
+      // Check for inactive user message
+      if (error.message) {
+        console.log("server", error.message);
+        setAuthError(
+          "Your account is inactive. Please contact the administrator to activate your account."
+        );
       } else {
-        setFirebaseError("An unexpected error occurred");
+        setAuthError(error.message || "An unexpected error occurred");
       }
-      console.error("Firebase login error details:", error);
     }
+  };
+
+  // Helper function to render error message with enhanced UI for inactive users
+  const renderErrorMessage = (errorMsg: string | null) => {
+    if (!errorMsg) return null;
+
+    const isInactiveError = errorMsg.toLowerCase().includes("inactive");
+
+    return (
+      <div className="rounded-md bg-red-50 p-4 mb-4">
+        <div className="text-sm text-red-700">
+          <p>{errorMsg}</p>
+
+          {isInactiveError && (
+            <div className="mt-2 pt-2 border-t border-red-200">
+              <p className="font-medium">Need help?</p>
+              <p>
+                Please contact our support team at{" "}
+                <a
+                  href="mailto:support@example.com"
+                  className="text-blue-600 hover:underline"
+                >
+                  support@example.com
+                </a>{" "}
+                to reactivate your account.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   // Prevent hydration errors by not rendering during SSR
@@ -180,7 +186,9 @@ export default function Login() {
                       type="password"
                       autoComplete="current-password"
                       className={`appearance-none  relative block w-full px-3 py-2 border 
-    ${errors.email && touched.email ? "border-red-500" : "border-gray-300"} 
+    ${
+      errors.password && touched.password ? "border-red-500" : "border-gray-300"
+    } 
     placeholder-gray-500 text-gray-900 rounded-md 
     focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
                       placeholder="Password"
@@ -193,13 +201,8 @@ export default function Login() {
                   </div>
                 </div>
 
-                {(error || firebaseError) && (
-                  <div className="rounded-md bg-red-50 p-4">
-                    <div className="text-sm text-red-700">
-                      {firebaseError || error}
-                    </div>
-                  </div>
-                )}
+                {/* Display auth errors */}
+                {renderErrorMessage(authError || error)}
 
                 <div>
                   <button

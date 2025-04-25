@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { register, resetRegistration } from "@/store/auth/auth.slice";
 import { RootState } from "@/store/store";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { FirebaseError } from "firebase/app";
-import { auth } from "@/lib/firebase";
 import { RegisterCredentials } from "@/types/user.types";
 import { Formik, Form, Field } from "formik";
 import * as Yup from "yup";
@@ -36,7 +33,7 @@ interface RegisterFormValues {
 export default function Register() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const [firebaseError, setFirebaseError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const { loading, error, registrationSuccess } = useSelector(
     (state: RootState) => state.auth
   );
@@ -58,68 +55,22 @@ export default function Register() {
 
   const handleSubmit = async (values: RegisterFormValues) => {
     try {
-      setFirebaseError(null); // Reset Firebase error on new submission
-      console.log("Starting Firebase registration process...");
+      setAuthError(null);
+      console.log("Starting registration process...");
 
-      // Create user in Firebase first
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        values.email,
-        values.password
-      );
-
-      console.log("Firebase user created successfully");
-
-      // Update the user's profile with their name
-      await updateProfile(userCredential.user, {
-        displayName: values.name,
-      });
-
-      console.log("Firebase profile updated with user name");
-
-      const firebaseToken = await userCredential.user.getIdToken();
-      console.log("Firebase token obtained");
-
-      // Dispatch register action with Firebase token
+      // Dispatch register action directly with credentials
       const registerData: RegisterCredentials = {
         name: values.name,
         email: values.email,
         password: values.password,
-        firebaseToken,
         role: "user", // default role
       };
 
       console.log("Dispatching register action to API");
       dispatch(register(registerData));
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Registration error:", error);
-      if (error instanceof FirebaseError) {
-        // Handle specific Firebase error messages
-        switch (error.code) {
-          case "auth/email-already-in-use":
-            setFirebaseError(
-              "This email is already registered. Please use a different email or try logging in."
-            );
-            break;
-          case "auth/invalid-email":
-            setFirebaseError("Invalid email address format.");
-            break;
-          case "auth/operation-not-allowed":
-            setFirebaseError(
-              "Email/password accounts are not enabled. Please contact support."
-            );
-            break;
-          case "auth/weak-password":
-            setFirebaseError(
-              "Password is too weak. Please use a stronger password."
-            );
-            break;
-          default:
-            setFirebaseError(error.message);
-        }
-      } else {
-        setFirebaseError("An unexpected error occurred. Please try again.");
-      }
+      setAuthError(error.message || "Registration failed. Please try again.");
     }
   };
 
@@ -210,10 +161,10 @@ export default function Register() {
                   </div>
                 </div>
 
-                {(error || firebaseError) && (
+                {(error || authError) && (
                   <div className="rounded-md bg-red-50 p-4 mt-4">
                     <div className="text-sm text-red-700">
-                      {firebaseError || error}
+                      {authError || error}
                     </div>
                   </div>
                 )}

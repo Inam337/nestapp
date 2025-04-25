@@ -71,8 +71,7 @@ const authSlice = createSlice({
         name: string;
         email: string;
         password: string;
-        firebaseToken: string;
-        role: string;
+        role?: string;
       }>
     ) => {
       state.loading = true;

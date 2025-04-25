@@ -70,6 +70,14 @@ export const routes: Record<string, Route> = {
       fill: "#9CA3AF",
     },
   },
+  changePassword: {
+    path: "/settings/change-password",
+    label: "Change Password",
+    icon: {
+      name: CommonIconNames.MENU_ICON,
+      fill: "#9CA3AF",
+    },
+  },
   login: {
     path: "/auth/login",
     label: "Login",

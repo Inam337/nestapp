@@ -1,5 +1,6 @@
 // store/sagas/index.ts
 import { all, fork } from "redux-saga/effects";
+import { authSaga } from "../auth/auth.saga";
 
 // Example watcher saga
 function* watchDrawerSaga() {
@@ -8,8 +9,5 @@ function* watchDrawerSaga() {
 }
 
 export default function* rootSaga() {
-  yield all([
-    fork(watchDrawerSaga),
-    // fork(otherWatchers)
-  ]);
+  yield all([fork(watchDrawerSaga), fork(authSaga)]);
 }

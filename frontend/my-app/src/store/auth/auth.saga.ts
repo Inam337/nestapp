@@ -30,29 +30,33 @@ function* loginSaga(
   try {
     console.log("Processing login request in saga...");
 
-    // Make sure we have a Firebase token
-    if (!action.payload.firebaseToken) {
-      console.error("Firebase token missing in login request");
-      throw new Error("Firebase authentication required");
-    }
-
-    console.log("Calling login API with Firebase token");
     const response: AuthResponse = yield call(
       AuthService.login,
       action.payload
     );
 
-    console.log("Login successful, storing auth data...");
+    console.log("Login successful, checking user status...");
 
-    // Store authentication data in localStorage
-    localStorage.setItem("token", response.token);
-    localStorage.setItem("refreshToken", response.refreshToken);
-    localStorage.setItem("user", JSON.stringify(response.user));
+    // Check if user is inactive before updating the store
+    if (response.user && response.user.status === false) {
+      console.log("Login attempt by inactive user");
+      yield put(
+        loginFailure(
+          "Account is inactive. Please contact the administrator to activate your account."
+        )
+      );
+      toast.error(
+        "Account is inactive. Please contact the administrator to activate your account."
+      );
+      return; // Exit early - don't update store with inactive user's data
+    }
 
-    // Add status property to user object to match User type
+    console.log("User is active, updating store...");
+
+    // Add status property to user object to match User type if not present
     yield put(
       loginSuccess({
-        user: { ...response.user, status: true },
+        user: { ...response.user, status: response.user.status ?? true },
         token: response.token,
         refreshToken: response.refreshToken,
       })
@@ -64,13 +68,17 @@ function* loginSaga(
   } catch (error: any) {
     console.error("Login saga error:", error);
 
-    // Check specifically for inactive user error
+    // Check specifically for inactive user error or other specific errors
     if (error.message && error.message.includes("User is inactive")) {
       console.log("Login attempt by inactive user");
       yield put(
-        loginFailure("Login attempt by inactive user please contact to admin")
+        loginFailure(
+          "Account is inactive. Please contact the administrator to activate your account."
+        )
       );
-      toast.error("Login attempt by inactive user please contact to admin");
+      toast.error(
+        "Account is inactive. Please contact the administrator to activate your account."
+      );
     } else {
       yield put(loginFailure(error.message || "Login failed"));
       toast.error(error.message || "Login failed");
@@ -83,11 +91,6 @@ function* registerSaga(
 ): SagaIterator<void> {
   try {
     console.log("Processing registration request...");
-
-    // Make sure we have a Firebase token
-    if (!action.payload.firebaseToken) {
-      throw new Error("Firebase authentication required");
-    }
 
     const response: AuthResponse = yield call(
       AuthService.register,
@@ -121,19 +124,9 @@ function* logoutSaga(): SagaIterator<void> {
   try {
     console.log("Processing logout in saga...");
 
-    // Call API to logout
+    // Call service to clear localStorage
     yield call(AuthService.logout);
-    console.log("API logout successful");
-
-    // Clear authentication data from localStorage
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("user");
-      sessionStorage.removeItem("token");
-      sessionStorage.removeItem("user");
-      console.log("Local storage cleared");
-    }
+    console.log("Local storage cleared");
 
     yield put(logoutSuccess());
     console.log("Logout success action dispatched");
@@ -163,10 +156,6 @@ function* refreshTokenSaga(): SagaIterator<void> {
       AuthService.refreshToken,
       currentRefreshToken
     );
-
-    // Update tokens in localStorage
-    localStorage.setItem("token", response.token);
-    localStorage.setItem("refreshToken", response.refreshToken);
 
     yield put(refreshTokenSuccess(response));
   } catch (error: any) {

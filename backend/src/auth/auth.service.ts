@@ -3,23 +3,54 @@ import {
   ConflictException,
   UnauthorizedException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Users } from '../entities/user.entity';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(Users) private userRepo: Repository<Users>,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   private async hashPassword(password: string): Promise<string> {
     const salt = await bcrypt.genSalt(10);
     return bcrypt.hash(password, salt);
+  }
+
+  private generateTokens(userId: number, email: string) {
+    const accessToken = this.jwtService.sign(
+      {
+        userId,
+        email,
+      },
+      {
+        secret: this.configService.get<string>('JWT_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') || '1h',
+      },
+    );
+
+    const refreshToken = this.jwtService.sign(
+      {
+        userId,
+        email,
+        isRefreshToken: true,
+      },
+      {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn:
+          this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d',
+      },
+    );
+
+    return { accessToken, refreshToken };
   }
 
   async register(name: string, email: string, password: string) {
@@ -42,6 +73,7 @@ export class AuthService {
         name,
         email,
         password: hashedPassword,
+        role: 'user', // Default role
       });
       console.log('User entity created:', { name, email });
 
@@ -52,11 +84,11 @@ export class AuthService {
         email: savedUser.email,
       });
 
-      // Generate JWT token
-      const token = this.jwtService.sign({
-        userId: savedUser.id,
-        email: savedUser.email,
-      });
+      // Generate JWT tokens
+      const { accessToken, refreshToken } = this.generateTokens(
+        savedUser.id,
+        savedUser.email,
+      );
 
       return {
         success: true,
@@ -65,8 +97,10 @@ export class AuthService {
           id: savedUser.id,
           name: savedUser.name,
           email: savedUser.email,
+          role: savedUser.role,
         },
-        token,
+        token: accessToken,
+        refreshToken,
       };
     } catch (error) {
       console.error('Error in register service:', error);
@@ -81,7 +115,12 @@ export class AuthService {
     try {
       console.log('Login attempt for email:', email);
 
-      const user = await this.userRepo.findOne({ where: { email } });
+      // Find user by email and explicitly select all needed fields including status
+      const user = await this.userRepo.findOne({
+        where: { email },
+        select: ['id', 'email', 'name', 'password', 'role', 'status'],
+      });
+
       if (!user) {
         console.log('User not found with email:', email);
         throw new UnauthorizedException('Invalid email or password');
@@ -96,13 +135,16 @@ export class AuthService {
       // Check if user is inactive
       if (user.status === false) {
         console.log('Login attempt by inactive user:', email);
-        throw new UnauthorizedException('User is inactive');
+        throw new UnauthorizedException(
+          'User is inactive. Please contact administrator to activate your account.',
+        );
       }
 
-      const token = this.jwtService.sign({
-        userId: user.id,
-        email: user.email,
-      });
+      // Generate JWT tokens
+      const { accessToken, refreshToken } = this.generateTokens(
+        user.id,
+        user.email,
+      );
 
       console.log('Login successful for user:', email);
       return {
@@ -112,11 +154,91 @@ export class AuthService {
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role || 'user',
+          status: user.status,
         },
-        token,
+        token: accessToken,
+        refreshToken,
       };
     } catch (error) {
       console.error('Error in login service:', error);
+      throw error;
+    }
+  }
+
+  async refreshToken(refreshToken: string) {
+    try {
+      // Verify refresh token
+      const payload = this.jwtService.verify(refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+
+      // Check if it's a refresh token
+      if (!payload.isRefreshToken) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      // Get user
+      const user = await this.userRepo.findOne({
+        where: {
+          id: payload.userId,
+          email: payload.email,
+        },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      // Generate new tokens
+      const tokens = this.generateTokens(user.id, user.email);
+
+      return {
+        token: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      };
+    } catch (error) {
+      console.error('Error in refreshToken service:', error);
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  async changePassword(
+    userId: number,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    try {
+      console.log('Change password attempt for user ID:', userId);
+
+      // Find user by ID
+      const user = await this.userRepo.findOne({ where: { id: userId } });
+      if (!user) {
+        console.log('User not found with ID:', userId);
+        throw new NotFoundException('User not found');
+      }
+
+      // Verify current password
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        console.log('Current password mismatch for user ID:', userId);
+        throw new UnauthorizedException('Current password is incorrect');
+      }
+
+      // Hash new password
+      const hashedPassword = await this.hashPassword(newPassword);
+
+      // Update user password
+      user.password = hashedPassword;
+      await this.userRepo.save(user);
+
+      console.log('Password changed successfully for user ID:', userId);
+      return {
+        success: true,
+        message: 'Password changed successfully',
+      };
+    } catch (error) {
+      console.error('Error in changePassword service:', error);
       throw error;
     }
   }

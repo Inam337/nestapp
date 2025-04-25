@@ -11,15 +11,13 @@ export interface User {
 export interface LoginCredentials {
   email: string;
   password: string;
-  firebaseToken?: string;
 }
 
 export interface RegisterCredentials {
   name: string;
   email: string;
   password: string;
-  firebaseToken: string;
-  role: string;
+  role?: string;
 }
 
 export interface AuthResponse {
@@ -28,9 +26,12 @@ export interface AuthResponse {
     name: string;
     email: string;
     role: string;
+    status?: boolean;
   };
   token: string;
   refreshToken: string;
+  success?: boolean;
+  message?: string;
 }
 
 export interface RefreshTokenResponse {
@@ -64,4 +65,14 @@ export interface UsersState {
   loading: boolean;
   error: string | null;
   total: number;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+  message: string;
 }
