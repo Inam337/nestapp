@@ -45,7 +45,13 @@ export default function Login() {
     if (token) {
       router.push("/dashboard");
     }
-  }, [token, router]);
+
+    // Display Redux error when it exists (specifically for inactive user errors)
+    if (error) {
+      // Set firebaseError state to display the error from Redux
+      setFirebaseError(error);
+    }
+  }, [token, router, error]);
 
   const initialValues: LoginFormValues = {
     email: "",

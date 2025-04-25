@@ -63,8 +63,18 @@ function* loginSaga(
     window.location.href = "/dashboard";
   } catch (error: any) {
     console.error("Login saga error:", error);
-    yield put(loginFailure(error.message || "Login failed"));
-    toast.error(error.message || "Login failed");
+
+    // Check specifically for inactive user error
+    if (error.message && error.message.includes("User is inactive")) {
+      console.log("Login attempt by inactive user");
+      yield put(
+        loginFailure("Login attempt by inactive user please contact to admin")
+      );
+      toast.error("Login attempt by inactive user please contact to admin");
+    } else {
+      yield put(loginFailure(error.message || "Login failed"));
+      toast.error(error.message || "Login failed");
+    }
   }
 }
 

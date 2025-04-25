@@ -16,7 +16,7 @@ export class AuthService {
       });
 
       const response = await axiosInstance.post<AuthResponse>(
-        "/auth/login",
+        "auth/login",
         credentials
       );
       return response.data;
@@ -37,7 +37,7 @@ export class AuthService {
       });
 
       const response = await axiosInstance.post<AuthResponse>(
-        "/auth/register",
+        "auth/register",
         credentials
       );
       return response.data;
@@ -52,7 +52,7 @@ export class AuthService {
   ): Promise<RefreshTokenResponse> {
     try {
       const response = await axiosInstance.post<RefreshTokenResponse>(
-        "/auth/refresh-token",
+        "auth/refresh-token",
         { refreshToken }
       );
       return response.data;
