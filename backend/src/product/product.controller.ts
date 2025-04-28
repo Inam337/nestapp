@@ -29,12 +29,15 @@ export class ProductController {
     return this.productService.findOne(id);
   }
   @Put(':id')
-  update(@Param(':id') id: number, body: Partial<Product>): Promise<Product> {
+  update(
+    @Param('id') id: number,
+    @Body() body: Partial<Product>,
+  ): Promise<Product> {
     return this.productService.update(id, body);
   }
 
   @Delete(':id')
-  remove(@Param(':id') id: number): Promise<void> {
+  remove(@Param('id') id: number): Promise<void> {
     return this.productService.remove(id);
   }
 }
