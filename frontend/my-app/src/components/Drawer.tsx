@@ -10,7 +10,7 @@ interface DrawerProps {
   children: React.ReactNode;
   isOpen: boolean;
   onClose: () => void;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "full";
   isOverlayClose?: boolean;
 }
 
@@ -63,6 +63,8 @@ const Drawer: React.FC<DrawerProps> = ({
         return "max-w-lg";
       case "xl":
         return "max-w-xl";
+      case "full":
+        return "max-w-full";
       default:
         return "max-w-md";
     }
@@ -125,12 +127,29 @@ const Drawer: React.FC<DrawerProps> = ({
 // Connected Drawer Component
 const ConnectedDrawer = () => {
   const dispatch = useDispatch();
-  const { isOpen, title, content, size, isOverlayClose } = useSelector(
-    (state: RootState) => state.drawer
-  );
+  const { isOpen, title, contentType, contentProps, size, isOverlayClose } =
+    useSelector((state: RootState) => state.drawer);
 
   const handleClose = () => {
     dispatch(closeDrawer());
+  };
+
+  // Simple content renderer based on contentType
+  const renderContent = () => {
+    if (!contentType) return null;
+
+    // This is a placeholder - in a full implementation you would import and render
+    // different components based on contentType
+    return (
+      <div className="p-4">
+        <h3 className="text-lg font-medium mb-4">
+          Content Type: {contentType}
+        </h3>
+        <pre className="bg-gray-100 p-4 rounded">
+          {JSON.stringify(contentProps, null, 2)}
+        </pre>
+      </div>
+    );
   };
 
   return (
@@ -141,7 +160,7 @@ const ConnectedDrawer = () => {
       size={size}
       isOverlayClose={isOverlayClose}
     >
-      {content}
+      {renderContent()}
     </Drawer>
   );
 };
